@@ -337,7 +337,7 @@ WHERE
   ) - INTERVAL '6 months';
 
 
--- 17. 
+-- 17. kjbscihbwihbco
 
 
 
