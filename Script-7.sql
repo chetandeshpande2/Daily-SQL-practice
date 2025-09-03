@@ -1,3 +1,5 @@
+-- Daily SQL Practice
+
 -- 1. Retrieve all customers' full names and their city.
 
 select coalesce("first_name") || ' ' || coalesce("last_name") as "full_name", city
@@ -337,11 +339,249 @@ WHERE
   ) - INTERVAL '6 months';
 
 
--- 17. kjbscihbwihbco
+-- PRACTICE QUESTIONS 2.0
+
+-- A. JOINS & RELATIONSHIPS
+
+-- 1. List all claims with their claim amount and the policy limit of the related policy.
+
+select "claim_number", "amount", p."policy_limit"
+from claim c
+join policy p
+on p."policy_number" = c."policy_number";
+
+
+-- 2. Show each customer’s full name along with the VIN of their car(s).
+
+select coalesce("first_name") || ' ' || coalesce ("last_name") as "full_name", v."vin"
+from customer c 
+join policy p
+on c."customer_number" = p."customer_number"
+join vehicle v
+on p."vin" = v."vin";
+
+
+-- 3. Retrieve each policy’s expiration date along with the customer’s city and state.
+
+select "policy_number", "expiration_date", a."city", a."state"
+from policy p
+join customer c 
+on p."customer_number" = c."customer_number"
+join address a
+on c."zipcode_street_id" = a.zipcode_street_id ;
+
+
+-- 4. Show all vehicles with their car make/model and the customer who owns them.
+
+select v."vin", c."car_make", c."car_model", p."customer_number"
+from vehicle v 
+join car_type c
+on v."car_type_id" = c."car_type_id"
+join policy p
+on v."vin" = p."vin";
+
+
+-- B. Aggregation & Grouping
+
+-- 5. Count how many policies each customer has.
+
+select count("policy_number"), c."customer_number"
+from "policy" p 
+join customer c
+on p.customer_number = c.customer_number 
+group by c."customer_number" ;
+
+
+-- 6. Find the average claim amount per policy.
+
+select avg(c."amount") as "Average_Amount", p."policy_number"
+from claim c
+join policy p
+on c."policy_number" = p."policy_number"
+group by p.policy_number ;
+
+
+-- 7. For each car make, calculate the total number of claims.
+
+select "car_make", count("claim_number") as "total number of claims"
+from car_type ct 
+join vehicle v 
+on ct."car_type_id" = v."car_type_id"
+join policy p
+on v."vin" = p."vin"
+join claim c
+on c."policy_number" = p."policy_number"
+group by "car_make" ;
+
+
+-- 8. Get the total deductible amount grouped by state.
+
+select sum(p."deductible") as "total_deductible", a."state"
+from policy p
+join customer c
+on p."customer_number" = c."customer_number"
+join address a
+on c."zipcode_street_id" = a."zipcode_street_id"
+group by a."state"
+order by "total_deductible" DESC;
+
+
+-- C. WINDOWS
+
+-- 9. For each customer, assign a row number to their claims ordered by claim date.
+
+select c.customer_number, cl.claim_number, cl.claim_date,
+row_number() over(partition by c.customer_number order by cl.claim_date)
+from customer c
+join policy p
+on c.customer_number = p.customer_number
+join claim cl
+on p.policy_number = cl.policy_number ;
+
+
+-- 10. Show each claim along with the running total claim amount per customer.
+
+select cl.claim_number, cl.claim_date, cl.amount,c.customer_number, 
+SUM(cl.amount) over(partition by c.customer_number order by cl.claim_date, cl.claim_number rows between unbounded preceding and current row) as running_total
+from customer c
+join policy p
+on c.customer_number = p.customer_number 
+join claim cl
+on p.policy_number = cl.policy_number 
+order by c.customer_number, cl.claim_date, cl.amount;
+
+
+-- 11. Find the latest claim date per customer using MAX() OVER (...).
+
+select c.customer_number, cl.claim_date, cl.claim_number, cl.amount,
+max(cl.claim_date) over(partition by c.customer_number) as latest_claim_date
+from customer c
+join policy p
+on c.customer_number = p.customer_number
+join claim cl
+on cl.policy_number = p.policy_number
+ORDER BY c.customer_number, cl.claim_date;
+
+
+-- 12. Rank customers by their total claim amount (highest to lowest).
+
+with totals as 
+(select c.customer_number, sum(cl.amount) as total_amount
+from customer c
+join policy p
+on c.customer_number = p.customer_number 
+join claim cl
+on cl.policy_number = p.policy_number
+group by c.customer_number)
+select customer_number, total_amount,
+rank() over(order by total_amount desc) as Customer_Rank
+from totals
+order by total_amount desc;
+
+-- 2nd Sept, 2025
+
+-- 1. Write a query to find the total number of claims filed by each customer, along with their name.
+
+select count(claim_number), cu.customer_number, coalesce("first_name") || ' ' || coalesce("last_name") as Full_Name
+from claim c
+join policy p 
+on c.policy_number = p.policy_number
+join customer cu
+on p.customer_number = cu.customer_number 
+group by cu.customer_number;
+
+
+-- 2. Retrieve the count of claims grouped by their claim status (e.g., Approved, Pending, Rejected).
+
+select count(claim_number), s.status as claim_status
+from claim c
+join status s
+on c.status_id = s.status_id 
+group by claim_status;
+
+
+-- 3. Find all claims where the claim amount is greater than the policy_limit.
+
+select claim_number, amount as claim_amount, p.policy_limit
+from claim c
+join policy p
+on c.policy_number = p.policy_number 
+where amount is not null 
+and p.policy_limit is not null
+and amount> p.policy_limit;
+
+
+-- 4. Find the top 5 customers who have the highest total claim amounts. Display first_name, last_name, and total amount.
+
+select c.customer_number as customer, sum(cl.amount) as total_claim_amount, c.first_name, c.last_name
+from customer c
+join policy p
+on c.customer_number = p.customer_number 
+join claim cl
+on p.policy_number = cl.policy_number 
+group by c.customer_number, c.first_name, c.last_name
+order by total_claim_amount desc
+limit 5;
+
+-- 5. List all policies that have expired (expiration_date < CURRENT_DATE) but have no claims filed against them.
+
+select p.policy_number, c.customer_number, p.expiration_date
+from policy p
+join customer c
+on p.customer_number = c.customer_number 
+where p.policy_number is null
+and p.expiration_date < CURRENT_DATE	;
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+. Expired Policies Without Claims
+
+👉 Tables: policy, claim
+
+6. Vehicles With Most Claims
+
+Find the top 3 car models (make + model) that have the most claims associated with them.
+👉 Tables: vehicle, car_type, policy, claim
+
+7. Average Claim Amount by State
+
+Calculate the average claim amount for customers grouped by their state.
+👉 Tables: claim, policy, customer, address
+
+8. Multiple Policies per Customer
+
+Find all customers who hold more than 1 active policy.
+👉 Tables: customer, policy
+
+9. Claims per Year
+
+Retrieve the total claim amount per year based on claim_date.
+👉 Tables: claim
+
+10. Join Challenge: Customer, Vehicle, Claim
+
+Write a query that displays:
+
+customer name
+
+car make & model
+
+policy number
+
+claim amount
+for all claims filed.
 
 
 
