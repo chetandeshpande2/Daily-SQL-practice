@@ -528,7 +528,7 @@ limit 5;
 select p.policy_number, c.customer_number, p.expiration_date
 from policy p
 join customer c
-on p.customer_number = c.customer_number 
+on p.customer_number = c.customer_number xs
 where p.policy_number is null
 and p.expiration_date < CURRENT_DATE	;
 
