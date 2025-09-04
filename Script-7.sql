@@ -533,6 +533,32 @@ where p.policy_number is null
 and p.expiration_date < CURRENT_DATE	;
 
 
+-- Find the top 3 car models (make + model) that have the most claims associated with them.
+
+select car_make, car_model, count(c.claim_number) as Most_Claims
+from claim c
+join policy p
+on p.policy_number = c.policy_number 
+join vehicle v
+on p.vin = v.vin  
+join car_type ct
+on v.car_type_id = ct.car_type_id 
+group by car_make, car_model
+order by Most_Claims desc
+limit 3;
+
+
+-- 7. Calculate the average claim amount for customers grouped by their state.
+
+select avg(c.amount), state
+from claim c
+join policy p
+on c.policy_number = p.policy_number 
+join customer cu
+on p.customer_number = cu.customer_number
+join address a
+on cu.zipcode_street_id = a.zipcode_street_id 
+group by a.state ;
 
 
 
@@ -544,21 +570,6 @@ and p.expiration_date < CURRENT_DATE	;
 
 
 
-
-
-. Expired Policies Without Claims
-
-👉 Tables: policy, claim
-
-6. Vehicles With Most Claims
-
-Find the top 3 car models (make + model) that have the most claims associated with them.
-👉 Tables: vehicle, car_type, policy, claim
-
-7. Average Claim Amount by State
-
-Calculate the average claim amount for customers grouped by their state.
-👉 Tables: claim, policy, customer, address
 
 8. Multiple Policies per Customer
 
