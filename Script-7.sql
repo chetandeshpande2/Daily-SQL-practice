@@ -561,6 +561,22 @@ on cu.zipcode_street_id = a.zipcode_street_id
 group by a.state ;
 
 
+-- 8. Find all customers who hold more than 1 active policy.
+
+select c.customer_number, count(policy_number) as Active_policy
+from customer c
+join policy p
+on c.customer_number = p.customer_number
+where p.expiration_date >= current_date
+group by c.customer_number
+having count(policy_number) > 1;
+
+-- 9. Retrieve the total claim amount per year based on claim_date.
+
+select sum(c.amount) as total_amount, extract(year from c.claim_date) as year
+from claim c
+group by year
+order by year;
 
 
 
@@ -571,15 +587,27 @@ group by a.state ;
 
 
 
-8. Multiple Policies per Customer
 
-Find all customers who hold more than 1 active policy.
-👉 Tables: customer, policy
 
-9. Claims per Year
 
-Retrieve the total claim amount per year based on claim_date.
-👉 Tables: claim
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 10. Join Challenge: Customer, Vehicle, Claim
 
